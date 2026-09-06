@@ -3,15 +3,17 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "playlistamp"
+name = "playlistamped"
 version = "0.1.0"
-description = "Mirror a YouTube Music playlist into a Plex playlist for Plexamp"
+description = "Mirror a YouTube Music or Spotify playlist into a Plex playlist for Plexamp"
 requires-python = ">=3.11"
+readme = "README.md"
+license = "MIT"
+keywords = ["plex", "plexamp", "playlist", "spotify", "youtube-music"]
 dependencies = [
     "ytmusicapi>=1.7",
     "plexapi>=4.15",
     "rapidfuzz>=3.6",
-    "rich>=13.7",
     "platformdirs>=4.0",
     "flask>=3.0",
 ]
@@ -20,13 +22,13 @@ dependencies = [
 dev = ["pytest>=8.0"]
 
 [project.scripts]
-playlistamp = "playlistamp.cli:main"
+playlistamped = "playlistamped.app:main"
 
 [tool.setuptools.packages.find]
-include = ["playlistamp*"]
+include = ["playlistamped*"]
 
 [tool.setuptools.package-data]
-playlistamp = ["templates/*.html", "static/*"]
+playlistamped = ["templates/*.html", "static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

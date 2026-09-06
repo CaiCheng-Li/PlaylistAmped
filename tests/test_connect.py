@@ -3,9 +3,9 @@ can change, so failure there must fall back to plex.tv discovery."""
 
 import pytest
 
-from playlistamp import plex_index
-from playlistamp.config import Config
-from playlistamp.plex_index import PlexError, connect
+from playlistamped import plex_index
+from playlistamped.config import Config
+from playlistamped.plex_index import PlexError, connect
 
 
 class FakeServer:
@@ -14,7 +14,7 @@ class FakeServer:
 
 
 def test_no_credentials_at_all_is_a_clear_error():
-    with pytest.raises(PlexError, match="playlistamp config"):
+    with pytest.raises(PlexError, match="No Plex connection configured"):
         connect(Config())
 
 

@@ -1,15 +1,24 @@
-"""Configuration: a TOML file in the platform config dir, overridable by env."""
+"""Configuration: a TOML file in the platform config dir, overridable by env.
+
+Paths come from ``platformdirs``, so this lands in ``~/.config/playlistamped``
+on Linux, ``~/Library/Application Support`` on macOS and ``%LOCALAPPDATA%`` on
+Windows without any per-platform code here.
+"""
 
 from __future__ import annotations
 
 import os
+import shutil
 import tomllib
 from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 
 from platformdirs import user_cache_dir, user_config_dir
 
-APP = "playlistamp"
+APP = "playlistamped"
+# The project was called this before the rename. An install that upgrades
+# should not have to sign in again or re-download a large library index.
+LEGACY_APP = "playlistamp"
 
 
 def config_dir() -> Path:
@@ -22,6 +31,25 @@ def cache_dir() -> Path:
 
 def config_path() -> Path:
     return config_dir() / "config.toml"
+
+
+def migrate_legacy() -> bool:
+    """Adopt settings and caches written under the old name. Returns True if
+    anything moved."""
+    moved = False
+    for legacy, current in (
+        (Path(user_config_dir(LEGACY_APP, appauthor=False)), config_dir()),
+        (Path(user_cache_dir(LEGACY_APP, appauthor=False)), cache_dir()),
+    ):
+        if legacy == current or not legacy.exists() or current.exists():
+            continue
+        try:
+            current.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(legacy), str(current))
+            moved = True
+        except OSError:
+            pass  # a failed migration just means a fresh start, not a crash
+    return moved
 
 
 @dataclass
@@ -55,6 +83,11 @@ class Config:
             or bool(self.username and self.password and self.server_name)
         )
 
+    def can_switch_servers(self) -> bool:
+        """Whether we hold plex.tv credentials, which is what lets the user
+        move to another server without signing in again."""
+        return bool(self.account_token or (self.username and self.password))
+
 
 def _quote(value: str) -> str:
     escaped = value.replace("\\", "\\\\").replace('"', '\\"')
@@ -63,6 +96,8 @@ def _quote(value: str) -> str:
 
 def load() -> Config:
     """Read config.toml if present, then apply environment overrides."""
+    migrate_legacy()
+
     cfg = Config()
     path = config_path()
     if path.exists():
@@ -90,7 +125,7 @@ def save(cfg: Config) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     data = asdict(cfg)
 
-    lines = ["# playlistamp configuration", "", "[plex]"]
+    lines = ["# playlistamped configuration", "", "[plex]"]
     for key in (
         "baseurl",
         "token",
@@ -106,8 +141,30 @@ def save(cfg: Config) -> Path:
         lines.append(f"{key} = {float(data[key])}")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
-    try:  # best effort; not supported on all filesystems
+    # Owner-only: the file holds a Plex token. No-op on filesystems without
+    # POSIX permissions, which is why the failure is swallowed.
+    try:
         path.chmod(0o600)
     except OSError:
         pass
     return path
+
+
+def sign_out(*, forget_decisions: bool = False) -> None:
+    """Remove the stored credentials and cached library.
+
+    The library index and playlist caches belong to the server being left, so
+    they go too. Review decisions survive unless explicitly dropped; saved
+    matches are reused only on their original server and library.
+    """
+    path = config_path()
+    if path.exists():
+        path.unlink()
+
+    root = cache_dir()
+    for name in ("index", "youtube", "spotify"):
+        shutil.rmtree(root / name, ignore_errors=True)
+    if forget_decisions:
+        decisions = root / "decisions.json"
+        if decisions.exists():
+            decisions.unlink()

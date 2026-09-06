@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>playlistamped</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-inner">
+    <div class="logo">playlist<span>amped</span></div>
+    <button class="chip hidden" id="btnSettings" aria-expanded="false">
+      <span id="chipText"></span>
+      <span class="chev">▾</span>
+    </button>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ============ CONNECT ============ -->
+  <section id="setup" class="setup hidden">
+    <div class="eyebrow">First run</div>
+    <h1>Connect to Plex</h1>
+    <p class="lede">Playlists live on your Plex server — Plexamp reads them from there.</p>
+
+    <div id="setupChoose" class="choices">
+      <button class="choice" id="btnPin">
+        <span class="choice-n">1</span>
+        <span>
+          <span class="choice-t">Sign in with a code at plex.tv</span>
+          <span class="choice-d">No address or token needed. Works when the server is somewhere else entirely, and lets you switch between servers later.</span>
+        </span>
+      </button>
+      <button class="choice" id="btnManual">
+        <span class="choice-n">2</span>
+        <span>
+          <span class="choice-t">Enter a server address and token</span>
+          <span class="choice-d">For a server you can reach directly on this network. Reaches only that one server.</span>
+        </span>
+      </button>
+    </div>
+
+    <div id="setupPin" class="card hidden mt28">
+      <div class="eyebrow">Step 1</div>
+      <p class="m0">Open <b>plex.tv/link</b> and enter this code:</p>
+      <div class="pin-code" id="pinCode">····</div>
+      <div class="row-center">
+        <span class="spin"></span><span id="pinStatus">Waiting for you to link…</span>
+      </div>
+    </div>
+
+    <div id="setupManual" class="card hidden mt28">
+      <div class="eyebrow">Server</div>
+      <div class="stack mt10">
+        <input type="url" id="mBaseurl" placeholder="http://192.168.1.20:32400" value="http://localhost:32400">
+        <input type="password" id="mToken" placeholder="X-Plex-Token" autocomplete="off">
+        <div class="hint">
+          In Plex Web: open any item → Get Info → View XML, then copy <b>X-Plex-Token</b> from that tab's URL.
+        </div>
+        <div><button class="primary" id="btnManualGo">Connect</button></div>
+      </div>
+    </div>
+
+    <div id="setupServers" class="card hidden mt28">
+      <div class="eyebrow">Step 2</div>
+      <h3 class="card-h">Choose your server</h3>
+      <div id="serverList" class="choices"></div>
+    </div>
+
+    <div id="setupSection" class="card hidden mt28">
+      <div class="eyebrow">Step 3</div>
+      <h3 class="card-h">Which music library?</h3>
+      <div class="row-gap">
+        <select id="sectionPick"></select>
+        <button class="primary" id="btnFinish">Done</button>
+      </div>
+    </div>
+
+    <div id="setupErr" class="err hidden"></div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section id="settings" class="card hidden settings-panel">
+    <div class="set-grid">
+      <div class="set-row">
+        <div class="set-label">Server</div>
+        <div class="set-body">
+          <div class="set-value" id="setServer">—</div>
+          <button class="ghost sm" id="btnSwitchServer">Switch server</button>
+        </div>
+      </div>
+      <div id="switchList" class="choices hidden mb14"></div>
+
+      <div class="set-row">
+        <div class="set-label">Library</div>
+        <div class="set-body">
+          <select id="setSection"></select>
+        </div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-label">Index</div>
+        <div class="set-body">
+          <div class="set-value" id="setIndexed">Not loaded yet</div>
+          <button class="ghost sm" id="btnRefreshIndex">Rebuild</button>
+        </div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-label">Matching</div>
+        <div class="set-body thresholds">
+          <label>Auto-accept at <input type="number" id="setAuto" min="1" max="100" step="1"></label>
+          <label>Review above <input type="number" id="setFloor" min="0" max="99" step="1"></label>
+          <button class="ghost sm" id="btnSaveThresholds">Save</button>
+        </div>
+      </div>
+
+      <div class="set-row danger">
+        <div class="set-label">Account</div>
+        <div class="set-body">
+          <button class="ghost sm danger-btn" id="btnSignOut">Sign out</button>
+          <span class="hint">Forgets this server, its token and the cached library.</span>
+        </div>
+      </div>
+    </div>
+    <div id="setMsg" class="hint mt10"></div>
+    <div id="setErr" class="err hidden"></div>
+  </section>
+
+  <!-- ============ MAIN ============ -->
+  <section id="main" class="hidden">
+    <div class="eyebrow">Playlist link</div>
+    <div class="sync-row mt10">
+      <input type="url" id="url" placeholder="YouTube Music or Spotify playlist link…" autocomplete="off">
+      <button class="primary" id="btnSync">Sync</button>
+      <button class="ghost hidden" id="btnResync" title="Fetch the playlist again and re-match">Re-sync</button>
+    </div>
+    <p class="lede sm-text">
+      Public playlists from YouTube Music or Spotify — no sign-in needed for either.
+    </p>
+
+    <details class="opts">
+      <summary>Options</summary>
+      <div class="opts-body">
+        <label class="opt">
+          <span>Playlist name in Plex</span>
+          <input type="text" id="optName" placeholder="leave blank to use the playlist's own title">
+        </label>
+        <label class="opt inline">
+          <input type="checkbox" id="optPreview">
+          <span>Preview only — match and show the result without writing to Plex</span>
+        </label>
+        <label class="opt inline">
+          <input type="checkbox" id="optNoReorder">
+          <span>Keep the existing order of a playlist I already curated</span>
+        </label>
+      </div>
+    </details>
+
+    <div id="progress" class="hidden mt24">
+      <div class="row-progress">
+        <span class="spin"></span><span id="progMsg">Starting…</span>
+      </div>
+      <div class="stages">
+        <div class="stage-pip" data-stage="playlist"></div>
+        <div class="stage-pip" data-stage="index"></div>
+        <div class="stage-pip" data-stage="match"></div>
+        <div class="stage-pip" data-stage="writing"></div>
+      </div>
+    </div>
+
+    <div id="syncErr" class="err hidden"></div>
+    <div id="truncNote" class="warn hidden"></div>
+
+    <div id="results" class="hidden">
+      <div class="tiles">
+        <div class="tile matched"><div class="tile-n mono" id="cMatched">0</div><div class="tile-l">In your library</div></div>
+        <div class="tile review"><div class="tile-n mono" id="cReview">0</div><div class="tile-l">Need a look</div></div>
+        <div class="tile missing"><div class="tile-n mono" id="cMissing">0</div><div class="tile-l">Not found</div></div>
+      </div>
+      <div class="result-foot">
+        <span id="writtenNote"></span>
+        <span class="dl">
+          <a href="/api/report/csv" download>Full report (CSV)</a>
+          <a href="/api/report/wanted" download>Wanted list</a>
+        </span>
+      </div>
+
+      <div id="queueWrap">
+        <div class="queue-head">
+          <h2>Needs a look</h2>
+          <div class="queue-hint"><kbd>A</kbd> add &nbsp; <kbd>I</kbd> ignore</div>
+        </div>
+        <div id="queue"></div>
+      </div>
+
+      <div class="mt36">
+        <details class="group">
+          <summary><b>Matched</b> <span class="group-n" id="nMatched"></span></summary>
+          <div class="group-body" id="listMatched"></div>
+        </details>
+        <details class="group">
+          <summary><b>Not in your library</b> <span class="group-n" id="nMissing"></span></summary>
+          <div class="group-body" id="listMissing"></div>
+        </details>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="applybar" id="applybar">
+  <div class="applybar-inner">
+    <span id="applyMsg"></span>
+    <button class="primary" id="btnApply">Update playlist</button>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

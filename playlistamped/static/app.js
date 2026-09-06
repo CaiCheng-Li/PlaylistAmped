@@ -3,10 +3,11 @@
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
   ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const show = (el, on = true) => el.classList.toggle("hidden", !on);
 
-async function api(path, body) {
+async function api(path, body, method) {
   const res = await fetch(path, {
-    method: body ? "POST" : "GET",
+    method: method || (body ? "POST" : "GET"),
     headers: body ? { "Content-Type": "application/json" } : {},
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -17,146 +18,260 @@ async function api(path, body) {
 
 function showErr(el, message) {
   el.textContent = message;
-  el.classList.remove("hidden");
+  show(el, true);
 }
 
-/* ------------------------------------------------------------------ setup */
+/* ==================================================================== boot */
 
-let sections = [];
+let current = {};
 
 async function boot() {
-  const state = await api("/api/state");
-  if (state.configured) {
-    enterMain(state);
-  } else {
-    $("setup").classList.remove("hidden");
-  }
+  const s = await api("/api/state");
+  current = s;
+  if (s.configured) enterMain(s);
+  else show($("setup"), true);
 }
 
-function enterMain(state) {
-  $("setup").classList.add("hidden");
-  $("main").classList.remove("hidden");
-  $("barMeta").classList.remove("hidden");
-  $("barMeta").innerHTML = `<b>${esc(state.server)}</b> · ${esc(state.section)}`;
+function enterMain(s) {
+  current = { ...current, ...s };
+  show($("setup"), false);
+  show($("main"), true);
+  show($("btnSettings"), true);
+  $("chipText").textContent = `${s.server} · ${s.section}`;
   $("url").focus();
 }
 
+/* =============================================================== connecting */
+
 $("btnPin").onclick = async () => {
-  $("setupChoose").classList.add("hidden");
-  $("setupPin").classList.remove("hidden");
+  show($("setupChoose"), false);
+  show($("setupPin"), true);
   try {
-    const { pin } = await api("/api/setup/pin", {});
+    const { pin } = await api("/api/pin", {});
     $("pinCode").textContent = pin;
     pollPin();
-  } catch (e) {
-    showErr($("setupErr"), e.message);
-  }
+  } catch (e) { showErr($("setupErr"), e.message); }
 };
 
 async function pollPin() {
   try {
-    const data = await api("/api/setup/pin/poll");
+    const data = await api("/api/pin/poll");
     if (!data.linked) return setTimeout(pollPin, 1500);
     $("pinStatus").textContent = `Signed in as ${data.username}`;
-    $("setupPin").classList.add("hidden");
+    show($("setupPin"), false);
     chooseServer(data.servers);
   } catch (e) {
     showErr($("setupErr"), e.message);
-    $("setupPin").classList.add("hidden");
-    $("setupChoose").classList.remove("hidden");
+    show($("setupPin"), false);
+    show($("setupChoose"), true);
   }
 }
 
-function chooseServer(servers) {
-  const box = $("setupServers");
-  box.classList.remove("hidden");
-  $("serverList").innerHTML = servers
-    .map((s, i) => `<button class="choice" data-name="${esc(s.name)}">
-        <span class="choice-n">${i + 1}</span>
-        <span><span class="choice-t">${esc(s.name)}</span>
-        <span class="choice-d">${s.owned ? "Your server" : "Shared with you"}</span></span>
-      </button>`).join("");
-
-  $("serverList").querySelectorAll("button").forEach((btn) => {
+function serverButtons(servers, container, onPick) {
+  container.innerHTML = servers.map((s, i) => `
+    <button class="choice" data-name="${esc(s.name)}">
+      <span class="choice-n">${i + 1}</span>
+      <span><span class="choice-t">${esc(s.name)}</span>
+      <span class="choice-d">${s.owned ? "Your server" : "Shared with you"}</span></span>
+    </button>`).join("");
+  container.querySelectorAll("button").forEach((btn) => {
     btn.onclick = async () => {
-      btn.disabled = true;
+      container.querySelectorAll("button").forEach((b) => (b.disabled = true));
       btn.querySelector(".choice-d").textContent = "Locating…";
       try {
-        const data = await api("/api/setup/server", { server_name: btn.dataset.name });
-        box.classList.add("hidden");
-        pickSection(data.sections);
+        await onPick(btn.dataset.name);
       } catch (e) {
-        showErr($("setupErr"), e.message);
-        btn.disabled = false;
+        container.querySelectorAll("button").forEach((b) => (b.disabled = false));
+        throw e;
       }
     };
   });
 }
 
+function chooseServer(servers) {
+  show($("setupServers"), true);
+  serverButtons(servers, $("serverList"), async (name) => {
+    try {
+      const data = await api("/api/server", { server_name: name });
+      show($("setupServers"), false);
+      pickSection(data.sections);
+    } catch (e) { showErr($("setupErr"), e.message); throw e; }
+  });
+}
+
 function pickSection(list) {
-  sections = list;
-  $("setupSection").classList.remove("hidden");
+  show($("setupSection"), true);
   $("sectionPick").innerHTML = list.map((s) => `<option>${esc(s)}</option>`).join("");
 }
 
 $("btnManual").onclick = () => {
-  $("setupChoose").classList.add("hidden");
-  $("setupManual").classList.remove("hidden");
+  show($("setupChoose"), false);
+  show($("setupManual"), true);
 };
 
 $("btnManualGo").onclick = async () => {
   const btn = $("btnManualGo");
-  btn.disabled = true;
-  btn.textContent = "Connecting…";
+  btn.disabled = true; btn.textContent = "Connecting…";
   try {
-    const data = await api("/api/setup/manual", {
+    const data = await api("/api/connect/manual", {
       baseurl: $("mBaseurl").value, token: $("mToken").value,
     });
-    $("setupManual").classList.add("hidden");
-    $("setupErr").classList.add("hidden");
+    show($("setupManual"), false);
+    show($("setupErr"), false);
     pickSection(data.sections);
-  } catch (e) {
-    showErr($("setupErr"), e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Connect";
-  }
+  } catch (e) { showErr($("setupErr"), e.message); }
+  finally { btn.disabled = false; btn.textContent = "Connect"; }
 };
 
 $("btnFinish").onclick = async () => {
   try {
-    const data = await api("/api/setup/finish", { section: $("sectionPick").value });
-    enterMain(data);
-  } catch (e) {
-    showErr($("setupErr"), e.message);
-  }
+    enterMain(await api("/api/finish", { section: $("sectionPick").value }));
+  } catch (e) { showErr($("setupErr"), e.message); }
 };
 
-/* ------------------------------------------------------------------- sync */
+/* ================================================================ settings */
+
+let settingsOpen = false;
+
+$("btnSettings").onclick = async () => {
+  settingsOpen = !settingsOpen;
+  $("btnSettings").setAttribute("aria-expanded", String(settingsOpen));
+  show($("settings"), settingsOpen);
+  show($("switchList"), false);
+  $("setMsg").textContent = "";
+  show($("setErr"), false);
+  if (settingsOpen) await fillSettings();
+};
+
+async function fillSettings() {
+  const s = await api("/api/state");
+  current = s;
+  $("setServer").textContent = s.server;
+  $("setIndexed").textContent = s.indexed
+    ? `${s.indexed.toLocaleString()} tracks cached`
+    : "Not loaded yet — built on the next sync";
+  $("setAuto").value = Math.round(s.auto_accept);
+  $("setFloor").value = Math.round(s.review_floor);
+
+  const btn = $("btnSwitchServer");
+  btn.disabled = !s.can_switch_servers;
+  btn.title = s.can_switch_servers
+    ? "" : "Only available when signed in through plex.tv";
+
+  try {
+    const libs = await api("/api/libraries");
+    $("setSection").innerHTML = libs.sections
+      .map((x) => `<option${x === libs.current ? " selected" : ""}>${esc(x)}</option>`)
+      .join("");
+  } catch (e) {
+    $("setSection").innerHTML = `<option>${esc(current.section || "—")}</option>`;
+    showErr($("setErr"), e.message);
+  }
+}
+
+$("btnSwitchServer").onclick = async () => {
+  const box = $("switchList");
+  if (!box.classList.contains("hidden")) return show(box, false);
+  try {
+    const data = await api("/api/servers");
+    show(box, true);
+    serverButtons(data.servers, box, async (name) => {
+      const picked = await api("/api/server", { server_name: name });
+      const done = await api("/api/finish", { section: picked.sections[0] });
+      show(box, false);
+      enterMain(done);
+      await fillSettings();
+      $("setMsg").textContent = `Now using ${done.server} · ${done.section}.`;
+      resetResults();
+    });
+  } catch (e) { showErr($("setErr"), e.message); }
+};
+
+$("setSection").onchange = async () => {
+  try {
+    await api("/api/library", { section: $("setSection").value });
+    const s = await api("/api/state");
+    enterMain(s);
+    $("setMsg").textContent = `Library switched to ${s.section}.`;
+    resetResults();
+  } catch (e) { showErr($("setErr"), e.message); }
+};
+
+$("btnRefreshIndex").onclick = async () => {
+  const btn = $("btnRefreshIndex");
+  btn.disabled = true; btn.textContent = "Rebuilding…";
+  $("setMsg").textContent = "Reading the whole library — this can take a few minutes.";
+  try {
+    const data = await api("/api/index/refresh", {});
+    $("setIndexed").textContent = `${data.indexed.toLocaleString()} tracks cached`;
+    $("setMsg").textContent = "Index rebuilt.";
+  } catch (e) { showErr($("setErr"), e.message); $("setMsg").textContent = ""; }
+  finally { btn.disabled = false; btn.textContent = "Rebuild"; }
+};
+
+$("btnSaveThresholds").onclick = async () => {
+  try {
+    const data = await api("/api/settings", {
+      auto_accept: Number($("setAuto").value),
+      review_floor: Number($("setFloor").value),
+    });
+    $("setMsg").textContent =
+      `Saved. Matches at ${data.auto_accept} or above go straight in; ` +
+      `below ${data.review_floor} counts as missing.`;
+    show($("setErr"), false);
+  } catch (e) { showErr($("setErr"), e.message); }
+};
+
+$("btnSignOut").onclick = async () => {
+  const btn = $("btnSignOut");
+  if (btn.dataset.armed !== "1") {
+    // Two-step rather than a modal: signing out drops the token and the
+    // cached library, and the next run re-downloads the whole thing.
+    btn.dataset.armed = "1";
+    btn.textContent = "Really sign out?";
+    setTimeout(() => { btn.dataset.armed = ""; btn.textContent = "Sign out"; }, 5000);
+    return;
+  }
+  try {
+    await api("/api/signout", {});
+    location.reload();
+  } catch (e) { showErr($("setErr"), e.message); }
+};
+
+/* ==================================================================== sync */
 
 const STAGES = ["playlist", "index", "match", "writing"];
 let poller = null;
+
+function resetResults() {
+  show($("results"), false);
+  show($("truncNote"), false);
+  show($("applybar"), false);
+  $("applybar").classList.remove("show");
+}
 
 function startSync(opts = {}) {
   const url = $("url").value.trim();
   if (!url) return $("url").focus();
 
-  $("syncErr").classList.add("hidden");
-  $("truncNote").classList.add("hidden");
-  $("results").classList.add("hidden");
-  $("progress").classList.remove("hidden");
+  show($("syncErr"), false);
+  show($("truncNote"), false);
+  show($("results"), false);
+  show($("progress"), true);
   $("btnSync").disabled = true;
   $("btnResync").disabled = true;
 
   api("/api/sync", {
     url,
-    refresh_index: !!opts.refreshIndex,
+    name: $("optName").value.trim(),
+    preview: $("optPreview").checked,
+    no_reorder: $("optNoReorder").checked,
     refresh_playlist: !!opts.refreshPlaylist,
   })
     .then(() => { poller = setInterval(pollJob, 900); pollJob(); })
     .catch((e) => {
       showErr($("syncErr"), e.message);
-      $("progress").classList.add("hidden");
+      show($("progress"), false);
       $("btnSync").disabled = false;
       $("btnResync").disabled = false;
     });
@@ -178,16 +293,14 @@ function paintStages(stage) {
 
 async function pollJob() {
   let job;
-  try {
-    job = await api("/api/job");
-  } catch { return; }
+  try { job = await api("/api/job"); } catch { return; }
 
   $("progMsg").textContent = job.message || "Working…";
   paintStages(job.stage);
 
   if (job.stage === "error") {
     clearInterval(poller);
-    $("progress").classList.add("hidden");
+    show($("progress"), false);
     showErr($("syncErr"), job.error);
     $("btnSync").disabled = false;
     $("btnResync").disabled = false;
@@ -196,40 +309,44 @@ async function pollJob() {
   if (job.stage !== "done") return;
 
   clearInterval(poller);
-  $("progress").classList.add("hidden");
+  show($("progress"), false);
   $("btnSync").disabled = false;
   $("btnResync").disabled = false;
-  $("btnResync").classList.remove("hidden");
+  show($("btnResync"), true);
   render(job);
 }
 
-/* ---------------------------------------------------------------- results */
+/* ================================================================= results */
 
-let job = null;
 let sourceLabel = "Source";
+let previewMode = false;
 
 function render(data) {
-  job = data;
   sourceLabel = data.source_short || "Source";
-  $("results").classList.remove("hidden");
+  previewMode = !!data.preview;
+  show($("results"), true);
   paintCounts(data.counts);
-  $("writtenNote").textContent = data.written
-    ? `${data.source_label || "Playlist"} → “${data.playlist_title}” ${data.written} on Plex.`
-    : "";
+
+  $("writtenNote").textContent = previewMode
+    ? "Preview only — nothing written to Plex yet."
+    : data.written
+      ? `${data.source_label || "Playlist"} → “${data.playlist_title}” ${data.written} on Plex.`
+      : "";
 
   // A partial read must never pass unremarked -- syncing 100 of 300 tracks
   // silently would look like a complete playlist.
   const trunc = $("truncNote");
-  if (data.truncated) {
-    trunc.textContent = data.truncated;
-    trunc.classList.remove("hidden");
-  } else {
-    trunc.classList.add("hidden");
-  }
+  if (data.truncated) { trunc.textContent = data.truncated; show(trunc, true); }
+  else show(trunc, false);
 
   renderQueue(data.review);
   renderList($("listMatched"), $("nMatched"), data.matched, true);
   renderList($("listMissing"), $("nMissing"), data.missing, false);
+
+  if (previewMode) {
+    $("applyMsg").textContent = "Preview — write this playlist to Plex?";
+    $("applybar").classList.add("show");
+  }
 }
 
 function paintCounts(c) {
@@ -310,10 +427,7 @@ function renderQueue(items) {
 
 function renderList(container, counter, items, matched) {
   counter.textContent = items.length;
-  if (!items.length) {
-    container.innerHTML = `<div class="empty">Nothing here.</div>`;
-    return;
-  }
+  if (!items.length) { container.innerHTML = `<div class="empty">Nothing here.</div>`; return; }
   container.innerHTML = items.map((i) => `<div class="row">
       <div class="row-main">${esc(i.title)} <span class="row-sub">— ${esc(i.artists)}</span></div>
       ${matched && i.chosen
@@ -322,7 +436,7 @@ function renderList(container, counter, items, matched) {
     </div>`).join("");
 }
 
-/* -------------------------------------------------------------- decisions */
+/* =============================================================== decisions */
 
 let pending = 0;
 
@@ -336,7 +450,6 @@ async function decide(card, action, ratingKey) {
     pending = data.pending;
     paintCounts(data.counts);
 
-    // Fade the card out, then remove it, so the queue visibly shortens.
     card.classList.add("resolving");
     setTimeout(() => {
       card.remove();
@@ -356,19 +469,15 @@ async function decide(card, action, ratingKey) {
 
 $("btnApply").onclick = async () => {
   const btn = $("btnApply");
-  btn.disabled = true;
-  btn.textContent = "Updating…";
+  btn.disabled = true; btn.textContent = "Updating…";
   try {
-    const data = await api("/api/apply", {});
+    const data = await api("/api/apply", { no_reorder: $("optNoReorder").checked });
     $("applyMsg").textContent = `Playlist ${data.action} — ${data.total} tracks`;
+    $("writtenNote").textContent = `“${$("optName").value.trim() || "Playlist"}” ${data.action} on Plex.`;
     $("applybar").classList.remove("show");
-    pending = 0;
-  } catch (e) {
-    showErr($("syncErr"), e.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Update playlist";
-  }
+    pending = 0; previewMode = false;
+  } catch (e) { showErr($("syncErr"), e.message); }
+  finally { btn.disabled = false; btn.textContent = "Update playlist"; }
 };
 
 /* Keyboard triage: the queue can run to dozens of items, so the top card is

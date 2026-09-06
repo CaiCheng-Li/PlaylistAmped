@@ -1,134 +1,166 @@
-# playlistamp
+# playlistamped
 
 Rebuild a YouTube Music or Spotify playlist inside your own Plex library, as
-closely as the library allows, so it shows up in Plexamp.
+closely as the library allows, so it turns up in Plexamp.
 
 Plexamp is only a client — playlists live on the Plex Media Server. So this
-reads the source's track list, matches each track against the music you already
+reads the source's track list, matches each track against music you already
 own, and writes a Plex playlist. Plexamp picks it up on its own.
+
+Everything happens in a local web interface: connecting to Plex, syncing,
+reviewing uncertain matches, switching servers, and signing out.
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│ SPOTIFY   Stairway to Heaven - Remaster              8:03    │
+│           Led Zeppelin                                       │
+│ ──────────────────────────────────────────────────────────── │
+│ LIBRARY   Stairway to Heaven                         8:18    │
+│           Dread Zeppelin · 5,000,000*                        │
+│                                                              │
+│ ▮▮▮▮▮▮▮▮▯▯  86  title 100 · artist 85 · length 56            │
+│                                        [ Ignore ]  [ Add ]   │
+└──────────────────────────────────────────────────────────────┘
+```
+
+That is the whole idea: a perfect title match, by a parody band, held back for
+you to judge rather than quietly added.
+
+## Requirements
+
+- Python 3.11 or newer
+- A Plex Media Server with a music library
+- Works on Linux, macOS and Windows
 
 ## Install
 
 ```bash
-python -m venv .venv
-.venv/Scripts/python -m pip install -e .        # Windows
-# source .venv/bin/activate && pip install -e . # macOS / Linux
+git clone https://github.com/CaiCheng-Li/PlaylistAmped.git
+cd PlaylistAmped
+
+python3 -m venv .venv
+source .venv/bin/activate        # Linux / macOS
+# .venv\Scripts\activate         # Windows
+
+pip install -e .
 ```
 
-## Set up
+## Run
 
 ```bash
-playlistamp config
+playlistamped
 ```
 
-It offers two ways to connect.
+It starts a local server on <http://127.0.0.1:7391> and opens your browser.
+If that port is taken it picks the next free one. `--port`, `--host` and
+`--no-browser` are there if you need them; those flags are the only command
+line the program has.
 
-**Sign in at plex.tv (recommended).** It shows you a short code to enter at
+It binds to localhost only by default, deliberately — the page can reach your
+Plex token, so it should not be served to the network.
+
+## Connecting to Plex
+
+On the first run you get two choices.
+
+**Sign in with a code at plex.tv.** It shows a short code to enter at
 <https://plex.tv/link>. Nothing else is needed — no IP address, no port, no
-token. Your account already knows every way to reach the server, so this works
+token. Your account already knows every route to your servers, so this works
 when the server is somewhere else entirely and you have no idea of its
-address, and it handles Google/Apple sign-in and two-factor, which a username
-and password cannot. It then lists the servers on your account, you pick one,
-and it caches whichever address actually answered.
+address, and it copes with Google/Apple sign-in and two-factor, which a
+username and password cannot. This is also what lets you switch servers later.
 
-If that cached address later stops working — the remote address Plex hands out
-does rotate — it silently re-discovers the server instead of failing.
-
-**Enter an address and token yourself.** For a server you can reach directly.
+**Enter a server address and token.** For a server you can reach directly.
 The token is in Plex Web under any item → **Get Info** → **View XML**, as the
-`X-Plex-Token` value in that tab's URL.
+`X-Plex-Token` value in that tab's URL. This route reaches only that one
+server.
 
-Settings live in `config.toml` in your platform config dir, readable only by
-you. `PLEX_URL`, `PLEX_TOKEN` and `PLEX_SECTION` override it.
+Either way you then pick which music library to use.
 
-## The interface
+## Syncing
 
-```bash
-playlistamp ui
-```
-
-Opens a local page at <http://127.0.0.1:5000>. On a first run it walks the same
-two connection options as `playlistamp config` — the plex.tv code, or an
-address and token — and then asks which music library to use.
-
-After that: paste a YouTube Music or Spotify playlist link, press **Sync**, and
-it fetches, matches, and writes the playlist. Confident matches go straight in.
-Everything uncertain
-lands in **Needs a look**, one card per track, showing the source track above
-the closest thing in your library, with **Add** and **Ignore**:
+Paste a public YouTube Music or Spotify playlist link and press **Sync**. No
+sign-in is needed for either service.
 
 ```
-YOUTUBE   Don't You Worry Child                            2:52
-          City Sessions
-──────────────────────────────────────────────────────────────
-LIBRARY   Don't You Worry Child                            5:35
-          Various Artists
-
-▮▮▮▮▮▮▮▯▯▯  72   title 100 · artist 50 · length 0   [Ignore] [Add]
+https://music.youtube.com/playlist?list=PL...
+https://open.spotify.com/playlist/37i9dQZF1DWXRqgorJj26U
 ```
 
-The bar breaks the score into the parts that produced it, so you can see *why*
-it is unsure — here the title is perfect and the artist is a compilation tag,
-which is a very different situation from a title that only half matches. Where
-there are runners-up, "other possibilities" opens them and any one can be added
-instead.
-
-Press <kbd>A</kbd> to add or <kbd>I</kbd> to ignore the top card without
-reaching for the mouse; the queue can run to dozens of tracks and this is much
-faster. Decisions are saved as you go and pushed to Plex when you press
-**Update playlist**. **Re-sync** re-runs the whole thing.
-
-Every decision is remembered against the source's own track id, so a track you
-have judged once never comes back — in this playlist or any other.
-
-## Use from the terminal
-
-```bash
-playlistamp sync "https://music.youtube.com/playlist?list=PL..."
-```
-
-Spotify links work the same way:
-
-```bash
-playlistamp sync "https://open.spotify.com/playlist/37i9dQZF1DWXRqgorJj26U"
-```
-
-No login is needed for either service. YouTube Music serves public and unlisted
-playlists without one; for Spotify, see below.
-
-The first run pulls your whole music library down once and caches it; later
+The first run downloads your whole music library once and caches it; later
 runs start instantly and refetch only when the library changes.
 
-Useful flags:
+Under **Options**:
 
-| Flag | Effect |
+| Option | Effect |
 |---|---|
-| `--dry-run` | print the full proposed mapping, write nothing |
-| `--yes` | skip interactive review (for unattended runs) |
-| `--name` | name the Plex playlist something other than the source's title |
-| `--no-reorder` | update contents but leave your hand-curated order alone |
-| `--auto-accept` / `--review-floor` | tune the match thresholds |
-| `--refresh-index` | rebuild the library index now |
+| Playlist name in Plex | Use a different name from the source playlist's own |
+| Preview only | Match and show the result without writing anything to Plex |
+| Keep the existing order | Update contents but leave an order you curated by hand |
 
-```bash
-playlistamp index --refresh    # rebuild the cached library index
-```
+**Re-sync** refetches the playlist and matches again, picking up tracks added
+at the source. Syncing the same playlist again updates it in place — the
+playlist keeps its identity on the server, so Plexamp keeps its artwork and
+position.
+
+## Reviewing
+
+Confident matches go straight in. Anything uncertain lands in **Needs a look**,
+one card per track: the source track above the closest thing in your library,
+with **Add** and **Ignore**.
+
+The bar breaks the score into the parts that produced it, so you can see *why*
+it is unsure. `title 100 · artist 50` means a perfect title against a
+compilation tag — a very different situation from a title that only half
+matches. Where there are runners-up, "other possibilities" opens them and any
+one can be added instead.
+
+Press <kbd>A</kbd> to add or <kbd>I</kbd> to ignore the top card without
+reaching for the mouse; the queue can run to dozens of tracks. Decisions are
+saved as you go and written to Plex when you press **Update playlist**.
+
+Review choices are remembered against the source's track id across playlists.
+Saved matches apply only to the same Plex server and library, because another
+server can use the same track id for a different song. Ignore choices apply
+across servers. Matches saved by older versions without a server identity need
+review once more.
+
+## Settings
+
+The chip in the top right (`Server · Library`) opens the settings panel:
+
+- **Switch server** — move to another Plex server on your account. Available
+  when you signed in through plex.tv.
+- **Library** — change which music library to match against.
+- **Index** — how many tracks are cached, and a rebuild button for when you
+  have added music and do not want to wait for the automatic check.
+- **Matching** — the auto-accept and review thresholds (see below).
+- **Sign out** — forgets the server, its token and the cached library.
 
 ## How matching works
 
-Both sides get reduced to a comparable form: `(Official Video)`, `- Remastered
-2011`, `Artist - Topic` and similar noise is stripped, guest artists are pulled
-out of the title, and accents and punctuation are folded away.
+Both sides are reduced to a comparable form: `(Official Video)`, `- Remastered
+2011`, `(From "Some Film")`, `Artist - Topic` and similar noise is stripped,
+guest artists are pulled out of the title, and accents and punctuation are
+folded away.
 
 What is deliberately *not* stripped is anything marking a different recording —
 `(Live)`, `(Acoustic)`, `(Demo)`, `(… Remix)`. Those become tags, and a
 mismatch is penalised hard, because quietly matching a live cut to the studio
 version is the usual way a tool like this goes wrong.
 
-Candidates are then scored on title, artist, album and duration. Duration does
-real work here: it separates the album cut from the extended mix when the
-titles are identical. Artist carries heavy weight, so a perfect title with the
-wrong artist loses.
+Candidates are then scored on title, artist, album and duration:
+
+- **Title** uses a length-sensitive comparison. A containment-based one scores
+  `"Sky High"` against `"High"` at 90 and floods the results with wrong songs
+  that merely share a word.
+- **Artist** carries heavy weight, and a low artist score applies a *ramped
+  penalty* on top. Weighting alone cannot sink a wrong match: at 30% weight a
+  26/100 artist score still leaves a same-word title above the review floor.
+- **Duration** is the disambiguator — it separates the album cut from the
+  extended mix when the titles are identical.
+- **Placeholder credits** like `Various Artists` count as *no* artist rather
+  than a conflicting one, so compilations are not wrongly rejected.
 
 User-curated playlists are full of uploads where the credited artist is really
 the uploading channel and the actual artist sits in the title —
@@ -136,45 +168,9 @@ the uploading channel and the actual artist sits in the title —
 `"Kashmir - Led Zeppelin"`. Both splits are tried and scored against your
 library, so whichever reading is real wins on its own merits.
 
-Scores at or above `--auto-accept` (default 88) match silently. Below
-`--review-floor` (default 65) the track is reported missing. In between, you
-are asked.
-
-## Review, and why it only happens once
-
-Borderline matches are shown with their candidates and a breakdown of why each
-scored as it did:
-
-```
-1  84  Hotel California — Eagles          title 100 · artist 100 · album 60 · length 30
-2  71  Hotel California — Eagles (live)   title 95 · artist 100 · album 40 · variant -18
-```
-
-`1`–`5` picks, `s` skips, `a` accepts the best for everything remaining, `q`
-stops. Every decision is saved against the source's own track id, so a track
-you have judged once is never raised again — in this playlist or any other. Repeat
-syncs stay quiet.
-
-## Re-running
-
-Syncing the same playlist again updates it in place: new tracks are added,
-dropped ones removed, and order restored. The playlist keeps its identity on
-the server, so Plexamp keeps its artwork and position.
-
-## Reports
-
-Each run writes `report-<playlist>-<timestamp>.csv` — every track, its status,
-what it matched, and the individual component scores. Anything your library
-does not have also goes to `wanted-<playlist>-<timestamp>.txt` as a shopping
-list.
-
-## Tests
-
-```bash
-.venv/Scripts/python -m pytest
-```
-
-They run fully offline against fixtures — no server and no network.
+Scores at or above **auto-accept** (default 88) match silently. Below the
+**review floor** (default 65) the track is reported missing. In between, you
+are asked. Both are adjustable in settings.
 
 ## How Spotify is read
 
@@ -187,23 +183,61 @@ itself uses, and needs no account or app registration:
 2. That token works against Spotify's pathfinder GraphQL endpoint, which pages
    through the entire playlist, 100 tracks at a time, with album names.
 3. If that ever stops working, the embed page's own payload still lists the
-   first 100 tracks. The playlist is then flagged as truncated — both the CLI
-   and the UI say how many tracks of the total were read, rather than quietly
-   syncing a partial playlist.
+   first 100 tracks. The playlist is then flagged as truncated, saying how many
+   of the total were read, rather than quietly syncing a partial playlist.
 
 That token is scoped to embed playback and is refused by `api.spotify.com`
 (`429 QUOTA_EXCEEDED`), which is why the GraphQL endpoint is used instead.
 
 Step 2 depends on a persisted-query hash (`PLAYLIST_QUERY_HASH` in
-`playlistamp/spotify.py`) because Spotify refuses raw queries. Spotify rotates
-these occasionally; if full playlists stop working, updating that one constant
-restores them, and until then step 3 keeps the tool usable.
+`playlistamped/spotify.py`) because Spotify refuses raw queries. Spotify
+rotates these occasionally; if full playlists stop working, updating that one
+constant restores them, and until then step 3 keeps the tool usable.
+
+## Reports
+
+After a run you can download the **full report** as CSV — every track, its
+status, what it matched, and the individual component scores — and a **wanted
+list** of everything your library does not have, as a plain shopping list.
+
+## Where your data lives
+
+Settings and caches use the standard per-user locations:
+
+| | Path |
+|---|---|
+| Linux | `~/.config/playlistamped`, `~/.cache/playlistamped` |
+| macOS | `~/Library/Application Support/playlistamped` |
+| Windows | `%LOCALAPPDATA%\playlistamped` |
+
+`config.toml` holds your Plex token and is written owner-only (`0600`) where
+the filesystem supports it. It is never committed, never logged, and never
+included in a report. `PLEX_URL`, `PLEX_TOKEN` and `PLEX_SECTION` override the
+file if you would rather pass them in.
+
+Signing out deletes the config and the cached library. Review decisions are
+kept across sign-out and server switches; saved matches are reused only on
+their original server and library.
+
+## Tests
+
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
+They run fully offline against fixtures — no Plex server and no network.
 
 ## Limits
 
 Only public playlists. Private ones, and YouTube's Liked Music, need a
 logged-in session. For YouTube the plumbing is already there — `YTMusic()` in
-`playlistamp/youtube.py` takes an `auth_file`, so wiring up a
+`playlistamped/youtube.py` takes an `auth_file`, so wiring up a
 `ytmusicapi browser` credential file is all that stands in the way.
 
-Matching can only find what you already own. The tool never downloads anything.
+Matching can only find what you already own. The tool never downloads music,
+and it only ever writes playlists — it does not touch your media files.
+
+## Licence
+
+MIT — see [LICENSE](LICENSE).

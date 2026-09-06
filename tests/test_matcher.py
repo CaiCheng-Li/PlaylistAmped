@@ -1,9 +1,9 @@
 import pytest
 
-from playlistamp.matcher import AUTO, MISSING, REVIEW, Matcher, score_pair
-from playlistamp.normalize import interpretations, make_track
-from playlistamp.plex_index import PlexIndex, PlexTrack
-from playlistamp.sources import SourceTrack
+from playlistamped.matcher import AUTO, MISSING, REVIEW, Matcher, score_pair
+from playlistamped.normalize import interpretations, make_track
+from playlistamped.plex_index import PlexIndex, PlexTrack
+from playlistamped.sources import SourceTrack
 
 LIBRARY = [
     ("1", "Bohemian Rhapsody", "Queen", "A Night at the Opera", 354),

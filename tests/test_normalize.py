@@ -1,6 +1,6 @@
 import pytest
 
-from playlistamp.normalize import (
+from playlistamped.normalize import (
     artist_key,
     basic_clean,
     clean_artist,

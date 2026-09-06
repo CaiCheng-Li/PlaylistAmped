@@ -5,8 +5,8 @@ import json
 
 import pytest
 
-from playlistamp import spotify
-from playlistamp.sources import SPOTIFY, YOUTUBE, PlaylistError, detect_source
+from playlistamped import spotify
+from playlistamped.sources import SPOTIFY, YOUTUBE, PlaylistError, detect_source
 
 EMBED_HTML = """<html><body>
 <script id="__NEXT_DATA__" type="application/json">{json}</script>

@@ -3,7 +3,7 @@ exercised here against stand-ins rather than a live Plex install."""
 
 import pytest
 
-from playlistamp.sync import find_playlist, sync_playlist
+from playlistamped.sync import find_playlist, sync_playlist
 
 
 class FakeItem:

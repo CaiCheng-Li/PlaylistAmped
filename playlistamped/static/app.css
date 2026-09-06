@@ -342,3 +342,101 @@ details.group[open] > summary { border-radius: var(--r-md) var(--r-md) 0 0; }
   .sync-row { flex-wrap: wrap; }
   .side-tag { width: 48px; }
 }
+
+/* ---------- header chip (opens settings) ---------- */
+
+.chip {
+  margin-left: auto;
+  display: flex; align-items: center; gap: 7px;
+  background: transparent; border: 1px solid var(--edge);
+  color: var(--ink-2); font-size: 12px; padding: 5px 10px;
+}
+.chip:hover { background: var(--crate-raised); color: var(--ink); }
+.chip .chev { color: var(--ink-4); font-size: 9px; transition: transform 140ms var(--ease); }
+.chip[aria-expanded="true"] .chev { transform: rotate(180deg); }
+
+/* ---------- settings panel ---------- */
+
+.settings-panel { margin-bottom: 28px; }
+.set-grid { display: grid; gap: 2px; }
+.set-row {
+  display: flex; gap: 16px; align-items: flex-start;
+  padding: 12px 0; border-top: 1px solid var(--edge-soft);
+}
+.set-row:first-child { border-top: none; padding-top: 0; }
+.set-label {
+  flex: none; width: 90px; padding-top: 5px;
+  font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3);
+}
+.set-body { flex: 1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.set-value { color: var(--ink); font-weight: 500; }
+.set-body select { width: auto; min-width: 190px; }
+
+button.sm { padding: 5px 10px; font-size: 12px; }
+button.danger-btn { color: #eaa08a; border-color: rgba(212, 103, 74, 0.32); }
+button.danger-btn:hover:not(:disabled) {
+  background: rgba(212, 103, 74, 0.12); border-color: rgba(212, 103, 74, 0.5);
+}
+.set-row.danger { border-top: 1px solid var(--edge); margin-top: 6px; }
+
+.thresholds { gap: 14px; }
+.thresholds label {
+  display: flex; align-items: center; gap: 7px;
+  color: var(--ink-2); font-size: 13px;
+}
+.thresholds input { width: 62px; text-align: center; }
+
+/* ---------- sync options ---------- */
+
+.opts { margin-top: 12px; }
+.opts > summary {
+  cursor: pointer; list-style: none; display: inline-flex; align-items: center; gap: 6px;
+  color: var(--ink-3); font-size: 12.5px; padding: 4px 0;
+  border-bottom: 1px dashed var(--edge-strong);
+}
+.opts > summary::-webkit-details-marker { display: none; }
+.opts > summary::before {
+  content: "▸"; font-size: 9px; color: var(--ink-4);
+  transition: transform 140ms var(--ease);
+}
+.opts[open] > summary::before { transform: rotate(90deg); }
+.opts > summary:hover { color: var(--ink-2); }
+.opts-body {
+  display: grid; gap: 12px; margin-top: 14px; padding: 16px;
+  background: var(--crate); border: 1px solid var(--edge); border-radius: var(--r-md);
+}
+.opt { display: grid; gap: 6px; font-size: 13px; color: var(--ink-2); }
+.opt.inline {
+  display: flex; align-items: flex-start; gap: 9px;
+  cursor: pointer; line-height: 1.45;
+}
+.opt.inline input { width: auto; margin-top: 2px; accent-color: var(--amber); }
+
+/* ---------- results footer ---------- */
+
+.result-foot {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  color: var(--ink-3); font-size: 12.5px;
+}
+.dl { margin-left: auto; display: flex; gap: 14px; }
+.dl a { color: var(--ink-3); text-decoration: none; border-bottom: 1px dashed var(--edge-strong); }
+.dl a:hover { color: var(--amber); border-bottom-color: var(--amber); }
+
+/* ---------- small shared helpers ---------- */
+
+.mt10 { margin-top: 10px; } .mt24 { margin-top: 24px; }
+.mt28 { margin-top: 28px; } .mt36 { margin-top: 36px; }
+.mb14 { margin-bottom: 14px; } .m0 { margin: 6px 0 0; }
+.stack { display: grid; gap: 10px; }
+.row-gap { display: flex; gap: 10px; }
+.row-gap select { flex: 1; }
+.row-gap button { flex: none; }
+.row-center {
+  display: flex; align-items: center; gap: 9px; justify-content: center;
+  color: var(--ink-3); font-size: 13px;
+}
+.row-progress { display: flex; align-items: center; gap: 9px; color: var(--ink-2); }
+.card-h { font-size: 16px; margin: 6px 0 12px; }
+.hint { color: var(--ink-3); font-size: 12.5px; }
+.sm-text { font-size: 13px; }
+.sync-row > button { flex: none; }

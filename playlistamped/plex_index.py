@@ -101,7 +101,7 @@ def account_for(cfg: Config) -> MyPlexAccount:
         return MyPlexAccount(token=cfg.account_token)
     if cfg.username and cfg.password:
         return MyPlexAccount(cfg.username, cfg.password)
-    raise PlexError("No plex.tv credentials configured. Run: playlistamp config")
+    raise PlexError("Not signed in to plex.tv. Connect from the app first.")
 
 
 def discover(cfg: Config) -> PlexServer:
@@ -137,7 +137,7 @@ def connect(cfg: Config) -> PlexServer:
     one falls back to rediscovery rather than giving up.
     """
     if not cfg.has_connection():
-        raise PlexError("No Plex connection configured. Run: playlistamp config")
+        raise PlexError("No Plex connection configured. Connect from the app first.")
 
     can_rediscover = bool(cfg.server_name) and bool(
         cfg.account_token or (cfg.username and cfg.password)
