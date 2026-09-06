@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>playlistamp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-inner">
+    <div class="logo">playlist<span>amp</span></div>
+    <div class="bar-meta hidden" id="barMeta"></div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ============ SETUP ============ -->
+  <section id="setup" class="setup hidden">
+    <div class="eyebrow">First run</div>
+    <h1>Connect to Plex</h1>
+    <p class="lede">Playlists live on your Plex server — Plexamp reads them from there.</p>
+
+    <div id="setupChoose" class="choices">
+      <button class="choice" id="btnPin">
+        <span class="choice-n">1</span>
+        <span>
+          <span class="choice-t">Sign in with a code at plex.tv</span>
+          <span class="choice-d">No address or token needed. Works when the server is somewhere else entirely.</span>
+        </span>
+      </button>
+      <button class="choice" id="btnManual">
+        <span class="choice-n">2</span>
+        <span>
+          <span class="choice-t">Enter a server address and token</span>
+          <span class="choice-d">For a server you can reach directly on this network.</span>
+        </span>
+      </button>
+    </div>
+
+    <div id="setupPin" class="card hidden" style="margin-top:28px">
+      <div class="eyebrow">Step 1</div>
+      <p style="margin:6px 0 0">Open <b>plex.tv/link</b> and enter this code:</p>
+      <div class="pin-code" id="pinCode">····</div>
+      <div style="display:flex;align-items:center;gap:9px;justify-content:center;color:var(--ink-3);font-size:13px">
+        <span class="spin"></span><span id="pinStatus">Waiting for you to link…</span>
+      </div>
+    </div>
+
+    <div id="setupManual" class="card hidden" style="margin-top:28px">
+      <div class="eyebrow">Server</div>
+      <div style="display:grid;gap:10px;margin-top:10px">
+        <input type="url" id="mBaseurl" placeholder="http://192.168.1.20:32400" value="http://localhost:32400">
+        <input type="text" id="mToken" placeholder="X-Plex-Token">
+        <div style="color:var(--ink-3);font-size:12.5px">
+          In Plex Web: open any item → Get Info → View XML, then copy <b>X-Plex-Token</b> from that tab's URL.
+        </div>
+        <div><button class="primary" id="btnManualGo">Connect</button></div>
+      </div>
+    </div>
+
+    <div id="setupServers" class="card hidden" style="margin-top:28px">
+      <div class="eyebrow">Step 2</div>
+      <h3 style="font-size:16px;margin:6px 0 12px">Choose your server</h3>
+      <div id="serverList" class="choices"></div>
+    </div>
+
+    <div id="setupSection" class="card hidden" style="margin-top:28px">
+      <div class="eyebrow">Step 3</div>
+      <h3 style="font-size:16px;margin:6px 0 12px">Which music library?</h3>
+      <div style="display:flex;gap:10px">
+        <select id="sectionPick"></select>
+        <button class="primary" id="btnFinish" style="flex:none">Done</button>
+      </div>
+    </div>
+
+    <div id="setupErr" class="err hidden"></div>
+  </section>
+
+  <!-- ============ MAIN ============ -->
+  <section id="main" class="hidden">
+    <div class="eyebrow">Playlist link</div>
+    <div class="sync-row" style="margin-top:10px">
+      <input type="url" id="url" placeholder="YouTube Music or Spotify playlist link…" autocomplete="off">
+      <button class="primary" id="btnSync" style="flex:none">Sync</button>
+      <button class="ghost hidden" id="btnResync" style="flex:none" title="Fetch the playlist again and re-match">Re-sync</button>
+    </div>
+    <p class="lede" style="font-size:13px" id="urlHint">
+      Public playlists from YouTube Music or Spotify — no sign-in needed for either.
+    </p>
+
+    <div id="progress" class="hidden" style="margin-top:24px">
+      <div style="display:flex;align-items:center;gap:9px;color:var(--ink-2)">
+        <span class="spin"></span><span id="progMsg">Starting…</span>
+      </div>
+      <div class="stages">
+        <div class="stage-pip" data-stage="playlist"></div>
+        <div class="stage-pip" data-stage="index"></div>
+        <div class="stage-pip" data-stage="match"></div>
+        <div class="stage-pip" data-stage="writing"></div>
+      </div>
+    </div>
+
+    <div id="syncErr" class="err hidden"></div>
+    <div id="truncNote" class="warn hidden"></div>
+
+    <div id="results" class="hidden">
+      <div class="tiles">
+        <div class="tile matched"><div class="tile-n mono" id="cMatched">0</div><div class="tile-l">In your library</div></div>
+        <div class="tile review"><div class="tile-n mono" id="cReview">0</div><div class="tile-l">Need a look</div></div>
+        <div class="tile missing"><div class="tile-n mono" id="cMissing">0</div><div class="tile-l">Not found</div></div>
+      </div>
+      <div style="color:var(--ink-3);font-size:12.5px" id="writtenNote"></div>
+
+      <div id="queueWrap">
+        <div class="queue-head">
+          <h2>Needs a look</h2>
+          <div class="queue-hint"><kbd>A</kbd> add &nbsp; <kbd>I</kbd> ignore</div>
+        </div>
+        <div id="queue"></div>
+      </div>
+
+      <div style="margin-top:36px">
+        <details class="group">
+          <summary><b>Matched</b> <span class="group-n" id="nMatched"></span></summary>
+          <div class="group-body" id="listMatched"></div>
+        </details>
+        <details class="group">
+          <summary><b>Not in your library</b> <span class="group-n" id="nMissing"></span></summary>
+          <div class="group-body" id="listMissing"></div>
+        </details>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="applybar" id="applybar">
+  <div class="applybar-inner">
+    <span id="applyMsg"></span>
+    <button class="primary" id="btnApply" style="margin-left:auto">Update playlist</button>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
