@@ -26,38 +26,211 @@ reviewing uncertain matches, switching servers, and signing out.
 That is the whole idea: a perfect title match, by a parody band, held back for
 you to judge rather than quietly added.
 
-## Requirements
+## Start here
 
-- Python 3.11 or newer
-- A Plex Media Server with a music library
-- Works on Linux, macOS and Windows
+These instructions start with a computer that does not have Python installed.
+You do not need programming experience or Git. Setup uses a few commands;
+afterward, you use PlaylistAmped in your browser.
 
-## Install
+Before starting, you need:
+
+- A Windows, macOS, or Linux computer with an internet connection.
+- Access to a Plex Media Server with a music library, including a shared server.
+- A public YouTube Music or Spotify playlist link.
+- Plexamp installed on the device where you want to listen.
+
+PlaylistAmped matches music already on your Plex server. It does not download
+the songs from YouTube or Spotify. Install it on the computer where you want
+to manage playlists; it does not need to run on the Plex server itself.
+
+### 1. Install Python
+
+Python runs PlaylistAmped. You need **Python 3.11 or newer**. Follow only the
+instructions for your operating system. In command blocks, copy one line at
+a time and press **Enter** after each line. Wait for it to finish before
+running the next one.
+
+#### Windows
+
+1. Open the [Python downloads page](https://www.python.org/downloads/windows/).
+2. Download the **Python install manager**, open the downloaded file, and
+   click **Install**.
+3. Open the Start menu, type **PowerShell**, and open **Windows PowerShell**.
+   If it was already open during installation, close it and open it again.
+4. Install Python, then check its version:
+
+   ```powershell
+   py install 3.14
+   py -3.14 --version
+   ```
+
+You should see `Python 3.14.x`, where the last number may vary. If `py` is not
+recognized, reopen PowerShell and check the
+[official Windows troubleshooting instructions](https://docs.python.org/3/using/windows.html#troubleshooting).
+
+#### macOS
+
+1. Open the [Python downloads page for macOS](https://www.python.org/downloads/macos/).
+2. Choose the latest stable Python 3 release and download its **macOS 64-bit
+   universal2 installer** (`.pkg`).
+3. Open the downloaded installer and follow its prompts.
+4. In Finder, open **Applications**, open the new **Python 3.x** folder, and
+   double-click **Install Certificates.command**. Let it finish; this sets up
+   certificates for secure downloads.
+5. Press **Command + Space**, type **Terminal**, and press **Enter**. Check Python:
+
+   ```bash
+   python3 --version
+   ```
+
+The result must be 3.11 or newer. If you see an older version, close and reopen
+Terminal after installation. More details are in the
+[official macOS installation guide](https://docs.python.org/3/using/mac.html).
+
+#### Linux
+
+On **Ubuntu or Debian**, open your Terminal application and run:
 
 ```bash
-git clone https://github.com/CaiCheng-Li/PlaylistAmped.git
-cd PlaylistAmped
+sudo apt update
+sudo apt install python3 python3-venv python3-pip
+python3 --version
+```
 
+`sudo` may ask for your computer's password. Nothing appears as you type it;
+this is normal. Press Enter when finished, and confirm installation if asked.
+
+The Python version must be **3.11 or newer**. If your distribution provides
+an older version, upgrade to a supported distribution release with Python
+3.11 or newer before continuing. For other Linux distributions, use their
+package manager to install Python 3, pip, and venv support, then run
+`python3 --version`. Ubuntu also provides an
+[official Python setup guide](https://ubuntu.com/developers/docs/howto/python-setup/).
+
+### 2. Download PlaylistAmped
+
+1. Open the [PlaylistAmped repository](https://github.com/CaiCheng-Li/PlaylistAmped).
+2. Click the green **Code** button, then **Download ZIP**.
+3. Extract the ZIP: on Windows, right-click it and choose **Extract All**;
+   on macOS, double-click it; on Linux, use your archive manager's **Extract** action.
+4. Move the extracted `PlaylistAmped-main` folder somewhere you want to keep it,
+   such as your Documents folder. Open it and find `README.md` and
+   `pyproject.toml`. If you see another `PlaylistAmped-main` folder instead,
+   open that inner folder.
+
+Keep this folder after installation. Run the following commands from the
+folder that contains `pyproject.toml`, not from inside the ZIP.
+
+### 3. Open a terminal in the project folder
+
+**Windows:** Open that folder in File Explorer, click the address bar, type
+`powershell`, and press Enter. A PowerShell window opens in that folder.
+
+**macOS or Linux:** Open Terminal, type `cd` followed by a space, then drag
+the extracted project folder into the terminal window and press Enter.
+Alternatively, type `cd` followed by the full folder path in quotation marks.
+For example, if you saved it in Documents:
+
+```bash
+cd "$HOME/Documents/PlaylistAmped-main"
+```
+
+Check that you are in the right place: run `dir` on Windows or `ls` on
+macOS/Linux. The listing should include `pyproject.toml`.
+
+### 4. Install PlaylistAmped
+
+This creates a `.venv` folder containing the app's Python environment and
+installs the packages it needs. Leave the terminal open and run each line
+below for your operating system. The download may take a few minutes.
+
+**Windows (PowerShell):**
+
+```powershell
+py -3.14 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -e .
+```
+
+**macOS or Linux:**
+
+```bash
 python3 -m venv .venv
-source .venv/bin/activate        # Linux / macOS
-# .venv\Scripts\activate         # Windows
-
-pip install -e .
+./.venv/bin/python -m pip install --upgrade pip
+./.venv/bin/python -m pip install -e .
 ```
 
-## Run
+Include the final `.` in the last command: it means “install this project
+folder.” Wait until the command finishes successfully before continuing.
+These commands use the environment directly, so no activation step is needed.
+See the [Python packaging guide](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/)
+for more about virtual environments.
+
+### 5. Start PlaylistAmped
+
+In the same terminal, run:
+
+**Windows (PowerShell):**
+
+```powershell
+.\.venv\Scripts\playlistamped.exe
+```
+
+**macOS or Linux:**
 
 ```bash
-playlistamped
+./.venv/bin/playlistamped
 ```
 
-It starts a local server on <http://127.0.0.1:7391> and opens your browser.
-If that port is taken it picks the next free one. `--port`, `--host` and
-`--no-browser` are there if you need them; those flags are the only command
-line the program has.
+Your browser should open the app. If it does not, open the address printed
+in the terminal, usually <http://127.0.0.1:7391>. If that port is busy, the
+app chooses another one, so use the printed address.
 
-It binds to localhost only by default, deliberately — the page can reach your
-Plex token, so it should not be served to the network.
+Keep the terminal open while using PlaylistAmped. To stop it, return to the
+terminal and press **Ctrl+C**. Closing the browser tab alone does not stop it.
+
+### 6. Connect and make your first playlist
+
+1. In the browser, click **Sign in with a code at plex.tv**.
+2. Open [plex.tv/link](https://plex.tv/link) in another tab, sign in to the
+   Plex account that can access your music server, and enter the displayed code.
+3. Return to PlaylistAmped, select your server, choose its music library,
+   and click **Done**.
+4. Paste a public YouTube Music or Spotify playlist link.
+5. For a trial run, open **Options** and select **Preview only**, then click
+   **Sync**. The first library scan can take a few minutes.
+6. Inspect the results. In **Needs a look**, use **Add** for the suggested
+   recording you want or **Ignore** to leave it out.
+7. To create the playlist after previewing, clear **Preview only** and click
+   **Sync** again. Saved review choices are reused. After any further review
+   changes, click **Update playlist** to write them to Plex.
+8. Open Plexamp using the same Plex account and server, then find the playlist
+   in your playlists view.
+
+You can also connect using a server address and token; see
+[Connecting to Plex](#connecting-to-plex) below.
+
+### Opening it again later
+
+Open a terminal in the same project folder (step 3), then run the start
+command for your operating system (step 5). You do not need to reinstall
+Python or repeat setup. Your Plex connection and review choices are saved.
+
+### Setup troubleshooting
+
+| Problem | What to do |
+|---|---|
+| `py` or `python3` is not found | Finish step 1 and reopen your terminal. |
+| Python is older than 3.11 | Install a newer Python version before creating `.venv`. |
+| pip says there is no `pyproject.toml` or the directory is not installable | Return to step 3 and open the extracted folder containing `pyproject.toml`. Include the final `.` in the install command. |
+| Linux reports that `venv` or `ensurepip` is unavailable | On Ubuntu/Debian, install `python3-venv`, then repeat step 4. |
+| The `.venv` start command is not found | Check the folder in step 3 and make sure all commands in step 4 completed successfully. |
+| Downloads fail | Check your internet connection and retry the failed command. On macOS, complete the certificate step in step 1. |
+| The browser cannot connect | Keep the app's terminal running and use the exact address it prints. |
+
+For advanced use, the launcher accepts `--port`, `--host`, and `--no-browser`.
+It binds to localhost by default. Keep that default for personal use: the
+page controls your Plex connection and should not be exposed to the network.
 
 ## Connecting to Plex
 
