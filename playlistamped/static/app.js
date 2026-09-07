@@ -37,7 +37,6 @@ function enterMain(s) {
   show($("setup"), false);
   show($("main"), true);
   show($("btnSettings"), true);
-  $("chipText").textContent = `${s.server} · ${s.section}`;
   $("url").focus();
 }
 
@@ -133,15 +132,39 @@ $("btnFinish").onclick = async () => {
 
 let settingsOpen = false;
 
+function closeSettings({ restoreFocus = false } = {}) {
+  if (!settingsOpen) return;
+  settingsOpen = false;
+  $("btnSettings").setAttribute("aria-expanded", "false");
+  $("btnSettings").setAttribute("aria-label", "Open settings");
+  show($("settings"), false);
+  if (restoreFocus) $("btnSettings").focus();
+}
+
 $("btnSettings").onclick = async () => {
-  settingsOpen = !settingsOpen;
-  $("btnSettings").setAttribute("aria-expanded", String(settingsOpen));
-  show($("settings"), settingsOpen);
+  if (settingsOpen) return closeSettings();
+  settingsOpen = true;
+  $("btnSettings").setAttribute("aria-expanded", "true");
+  $("btnSettings").setAttribute("aria-label", "Close settings");
+  show($("settings"), true);
   show($("switchList"), false);
   $("setMsg").textContent = "";
   show($("setErr"), false);
-  if (settingsOpen) await fillSettings();
+  try { await fillSettings(); }
+  catch (e) { showErr($("setErr"), e.message); }
 };
+
+$("btnCloseSettings").onclick = () => closeSettings({ restoreFocus: true });
+
+document.addEventListener("click", (e) => {
+  if (!settingsOpen) return;
+  if ($("settings").contains(e.target) || $("btnSettings").contains(e.target)) return;
+  closeSettings();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && settingsOpen) closeSettings({ restoreFocus: true });
+});
 
 async function fillSettings() {
   const s = await api("/api/state");

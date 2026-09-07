@@ -59,6 +59,9 @@ def test_page_renders(client):
     page = client.get("/")
     assert page.status_code == 200
     assert b"playlist" in page.data
+    assert b'aria-label="Open settings"' in page.data
+    assert b'class="settings-trigger hidden"' in page.data
+    assert b'class="card hidden settings-popover"' in page.data
 
 
 class FakePinLogin:

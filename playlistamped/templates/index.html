@@ -14,10 +14,67 @@
 <header class="bar">
   <div class="bar-inner">
     <div class="logo">playlist<span>amped</span></div>
-    <button class="chip hidden" id="btnSettings" aria-expanded="false">
-      <span id="chipText"></span>
-      <span class="chev">▾</span>
+    <button class="settings-trigger hidden" id="btnSettings" type="button"
+            aria-label="Open settings" aria-controls="settings" aria-expanded="false"
+            title="Settings">
+      <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 15.25a3.25 3.25 0 1 0 0-6.5 3.25 3.25 0 0 0 0 6.5Z"/>
+        <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.86 2.86-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .64 1.7 1.7 0 0 0-.4 1.1V21h-3.2v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.86-2.86.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.64-1 1.7 1.7 0 0 0-1.1-.4H2.8v-3.2h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.88l-.06-.06L7.06 4.2l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.64 1.7 1.7 0 0 0 .4-1.1V2.8h3.2v.09A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.86 2.86-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 .64 1 1.7 1.7 0 0 0 1.1.4h.06v3.2h-.09A1.7 1.7 0 0 0 19.4 15Z"/>
+      </svg>
     </button>
+    <section id="settings" class="card hidden settings-popover" aria-labelledby="settingsTitle">
+      <div class="settings-head">
+        <div>
+          <div class="eyebrow">Preferences</div>
+          <h2 id="settingsTitle">Settings</h2>
+        </div>
+        <button class="settings-close" id="btnCloseSettings" type="button" aria-label="Close settings">&times;</button>
+      </div>
+
+      <div class="set-grid">
+        <div class="set-row">
+          <div class="set-label">Server</div>
+          <div class="set-body">
+            <div class="set-value" id="setServer">—</div>
+            <button class="ghost sm" id="btnSwitchServer">Switch server</button>
+          </div>
+        </div>
+        <div id="switchList" class="choices hidden mb14"></div>
+
+        <div class="set-row">
+          <div class="set-label">Library</div>
+          <div class="set-body"><select id="setSection"></select></div>
+        </div>
+
+        <div class="set-row">
+          <div class="set-label">Index</div>
+          <div class="set-body">
+            <div class="set-value" id="setIndexed">Not loaded yet</div>
+            <button class="ghost sm" id="btnRefreshIndex">Rebuild</button>
+          </div>
+        </div>
+
+        <div class="set-row">
+          <div class="set-label">Matching</div>
+          <div class="set-body thresholds">
+            <label>Auto-accept at <input type="number" id="setAuto" min="1" max="100" step="1"></label>
+            <label>Review above <input type="number" id="setFloor" min="0" max="99" step="1"></label>
+            <button class="ghost sm" id="btnSaveThresholds">Save</button>
+          </div>
+        </div>
+
+        <div class="set-row danger">
+          <div class="set-label">Account</div>
+          <div class="set-body">
+            <button class="ghost sm danger-btn" id="btnSignOut">Sign out</button>
+            <span class="hint">Forgets this server, its token and the cached library.</span>
+          </div>
+        </div>
+      </div>
+      <div id="setMsg" class="hint mt10" aria-live="polite"></div>
+      <div id="setErr" class="err hidden"></div>
+    </section>
   </div>
 </header>
 
@@ -83,54 +140,6 @@
     </div>
 
     <div id="setupErr" class="err hidden"></div>
-  </section>
-
-  <!-- ============ SETTINGS ============ -->
-  <section id="settings" class="card hidden settings-panel">
-    <div class="set-grid">
-      <div class="set-row">
-        <div class="set-label">Server</div>
-        <div class="set-body">
-          <div class="set-value" id="setServer">—</div>
-          <button class="ghost sm" id="btnSwitchServer">Switch server</button>
-        </div>
-      </div>
-      <div id="switchList" class="choices hidden mb14"></div>
-
-      <div class="set-row">
-        <div class="set-label">Library</div>
-        <div class="set-body">
-          <select id="setSection"></select>
-        </div>
-      </div>
-
-      <div class="set-row">
-        <div class="set-label">Index</div>
-        <div class="set-body">
-          <div class="set-value" id="setIndexed">Not loaded yet</div>
-          <button class="ghost sm" id="btnRefreshIndex">Rebuild</button>
-        </div>
-      </div>
-
-      <div class="set-row">
-        <div class="set-label">Matching</div>
-        <div class="set-body thresholds">
-          <label>Auto-accept at <input type="number" id="setAuto" min="1" max="100" step="1"></label>
-          <label>Review above <input type="number" id="setFloor" min="0" max="99" step="1"></label>
-          <button class="ghost sm" id="btnSaveThresholds">Save</button>
-        </div>
-      </div>
-
-      <div class="set-row danger">
-        <div class="set-label">Account</div>
-        <div class="set-body">
-          <button class="ghost sm danger-btn" id="btnSignOut">Sign out</button>
-          <span class="hint">Forgets this server, its token and the cached library.</span>
-        </div>
-      </div>
-    </div>
-    <div id="setMsg" class="hint mt10"></div>
-    <div id="setErr" class="err hidden"></div>
   </section>
 
   <!-- ============ MAIN ============ -->
