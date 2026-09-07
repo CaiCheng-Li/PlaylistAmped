@@ -200,8 +200,13 @@ def api_pin_poll():
     login = state.pin_login
     if login is None:
         return _fail("No sign-in in progress")
-    if not login.checkLogin():
-        if login.expired:
+    # ``api_pin`` starts MyPlexPinLogin's background polling thread. PlexAPI's
+    # checkLogin() deliberately returns False whenever that thread exists, so
+    # mixing the threaded and manual-polling APIs leaves the browser waiting
+    # forever even after Plex has supplied a token. Observe the state produced
+    # by the background thread instead.
+    if not login.token:
+        if login.finished or login.expired:
             return _fail("The code expired. Start again.", 408)
         return jsonify({"linked": False})
 

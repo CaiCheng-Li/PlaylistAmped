@@ -61,6 +61,56 @@ def test_page_renders(client):
     assert b"playlist" in page.data
 
 
+class FakePinLogin:
+    def __init__(self, token=None, finished=False, expired=False):
+        self.token = token
+        self.finished = finished
+        self.expired = expired
+
+    def checkLogin(self):
+        raise AssertionError("threaded PIN login must not call checkLogin")
+
+
+def test_pin_poll_waits_while_background_login_is_running(client, monkeypatch):
+    monkeypatch.setattr(state, "pin_login", FakePinLogin())
+    body = client.get("/api/pin/poll")
+    assert body.status_code == 200
+    assert body.get_json() == {"linked": False}
+
+
+def test_pin_poll_uses_token_from_background_login(client, fake_config, monkeypatch):
+    class Resource:
+        name = "Home"
+        owned = True
+        provides = "server"
+
+    class Account:
+        username = "listener"
+
+        def resources(self):
+            return [Resource()]
+
+    monkeypatch.setattr(state, "pin_login", FakePinLogin(token="linked-token"))
+    monkeypatch.setattr("plexapi.myplex.MyPlexAccount", lambda token: Account())
+
+    body = client.get("/api/pin/poll")
+
+    assert body.status_code == 200
+    assert body.get_json() == {
+        "linked": True,
+        "username": "listener",
+        "servers": [{"name": "Home", "owned": True}],
+    }
+    assert state.pending_cfg.account_token == "linked-token"
+
+
+def test_pin_poll_reports_a_finished_login_without_a_token_as_expired(client, monkeypatch):
+    monkeypatch.setattr(state, "pin_login", FakePinLogin(finished=True))
+    body = client.get("/api/pin/poll")
+    assert body.status_code == 408
+    assert "expired" in body.get_json()["error"]
+
+
 def test_sync_requires_a_url(client):
     assert client.post("/api/sync", json={"url": "  "}).status_code == 400
 
